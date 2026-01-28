@@ -1,47 +1,60 @@
 import asyncio
 import json
 import logging
+import os
 from dotenv import load_dotenv
 from app.scraper import CMCScraper
+from app.analyzer import CryptoAnalyzer
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("SystemOrchestrator")
 
 
 async def main():
-    print("--- INICIANDO SISTEMA DE MONITORAMENTO CRIPTO ---")
+    print("\n" + "=" * 50)
+    print("   SISTEMA DE INTELIGÊNCIA CRIPTO (CMC + GEMINI)   ")
+    print("=" * 50 + "\n")
 
+    # Scraping
+    scraper = CMCScraper()
     try:
-        scraper = CMCScraper()
+        raw_posts = await scraper.run(scroll_attempts=5, headless=False)
+    except Exception as e:
+        logger.critical(f"Falha no Scraping: {e}")
+        return
 
-        # headless=False para você ver o navegador abrindo (mude para True em produção)
-        # scroll_attempts=5 garante uma boa quantidade de posts
-        posts = await scraper.run(scroll_attempts=5, headless=False)
+    if not raw_posts:
+        logger.warning("Nenhum dado coletado. Encerrando.")
+        return
 
-        print("\n" + "=" * 40)
-        print(f"      RESULTADO: {len(posts)} POSTS COLETADOS      ")
-        print("=" * 40)
+    print(f"\n✅ [Scraper] {len(raw_posts)} posts coletados. Iniciando IA...\n")
 
-        if not posts:
-            logger.warning(
-                "Nenhum post foi coletado. Verifique os seletores ou a conexão."
-            )
-            return
+    # LLM
+    try:
+        analyzer = CryptoAnalyzer()
+        insight_report = analyzer.analyze_market_sentiment(raw_posts)
 
-        print("\n--- Amostra dos Dados (Top 10) ---")
-        for i, post in enumerate(posts[:10]):
-            # Corta textos muito longos para visualização no terminal
-            preview = post[:150].replace("\n", " ")
-            print(f"[{i+1}] {preview}...")
-            print("-" * 20)
+        if insight_report:
+            print("=" * 50)
+            print("RELATÓRIO DE MERCADO - BITCOIN")
+            print("=" * 50)
+            # Imprime o JSON formatado e bonitinho
+            print(json.dumps(insight_report, indent=4, ensure_ascii=False))
+            print("=" * 50)
 
-        # (Futuro) Aqui vou chamar o analyzer.analyze_posts(posts)
+            # (Opcional) Salvar em arquivo para histórico
+            with open("relatorio_btc.json", "w", encoding="utf-8") as f:
+                json.dump(insight_report, f, indent=4, ensure_ascii=False)
+                logger.info("Relatório salvo em 'relatorio_btc.json'")
 
     except ValueError as e:
-        logger.critical(f"Erro de configuração: {e}")
+        logger.error(f"Configuração da IA inválida: {e}")
     except Exception as e:
-        logger.critical(f"Erro inesperado no sistema: {e}")
+        logger.error(f"Erro inesperado na análise: {e}")
 
 
 if __name__ == "__main__":

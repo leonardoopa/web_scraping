@@ -11,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class CMCScraper:
-    """
-    Classe responsável por realizar o scraping da comunidade do CoinMarketCap.
-    Segue o princípio de responsabilidade única (SRP) e Clean Code.
-    """
 
     MIN_POST_LENGTH = 30
     MAX_POST_LENGTH = 2000
@@ -24,7 +20,7 @@ class CMCScraper:
     # Seletor CSS (Estratégia 'dir=auto' para pegar comentários de usuário)
     POST_CONTENT_SELECTOR = 'div[dir="auto"], p'
 
-    # Blacklist: Termos que indicam que o texto NÃO é um post de usuário
+    # Blacklist
     IGNORED_KEYWORDS = {
         "Leaderboards",
         "Trending",
@@ -57,12 +53,11 @@ class CMCScraper:
     def _validate_config(self):
         if not self.target_url:
             raise ValueError(
-                "Erro de Configuração: A variável 'CMC_URL' não foi encontrada no .env"
+                "Configuration Error: The variable 'CMC_URL' was not found in the .env file."
             )
 
     async def _scroll_page(self, page: Page, scroll_count: int):
-        """Executa a rolagem da página para carregar o 'infinite scroll'."""
-        logger.info(f"Iniciando scroll de {scroll_count} etapas...")
+        logger.info(f"Starting scroll of {scroll_count} steps...")
 
         for i in range(scroll_count):
             logger.info(f"Scrollando {i + 1}/{scroll_count}...")
@@ -70,10 +65,6 @@ class CMCScraper:
             await asyncio.sleep(self.SCROLL_DELAY_SECONDS)
 
     def _is_valid_post(self, text: str) -> bool:
-        """
-        Filtro de Regras de Negócio.
-        Retorna True se o texto parecer um post genuíno, False se for lixo/menu.
-        """
         clean_text = text.strip()
         text_len = len(clean_text)
 
@@ -89,7 +80,7 @@ class CMCScraper:
 
     async def _extract_and_filter_posts(self, page: Page) -> List[str]:
         """Extrai os elementos do DOM e aplica os filtros Python."""
-        logger.info("Extraindo textos brutos da página...")
+        logger.info("Extracting raw text from the page...")
 
         try:
             # Pega todos os textos que batem com o seletor
@@ -97,7 +88,7 @@ class CMCScraper:
                 self.POST_CONTENT_SELECTOR
             ).all_inner_texts()
         except Exception as e:
-            logger.error(f"Falha ao buscar seletores na página: {e}")
+            logger.error(f"Failed to fetch selectors from the page: {e}")
             return []
 
         valid_posts: List[str] = []
@@ -112,17 +103,13 @@ class CMCScraper:
                 seen_posts.add(clean_text)
 
         logger.info(
-            f"Filtro concluído: {len(valid_posts)} posts válidos de {len(raw_elements)} elementos brutos."
+            f"Filter completed: {len(valid_posts)} valid posts from {len(raw_elements)} raw elements."
         )
         return valid_posts
 
     async def run(self, scroll_attempts: int = 3, headless: bool = False) -> List[str]:
-        """
-        Método Principal (Entry Point).
-        Orquestra a abertura do browser, navegação e extração.
-        """
         async with async_playwright() as playwright:
-            logger.info("Iniciando motor do Playwright...")
+            logger.info("Starting Playwright engine...")
 
             # Configuração do Browser
             browser = await playwright.chromium.launch(headless=headless)
@@ -134,7 +121,7 @@ class CMCScraper:
             page = await context.new_page()
 
             try:
-                logger.info(f"Navegando para: {self.target_url}")
+                logger.info(f"Navigating to: {self.target_url}")
                 # 'networkidle' espera as conexões de rede baixarem (bom para sites dinâmicos)
                 await page.goto(
                     self.target_url, wait_until="networkidle", timeout=60000
@@ -146,8 +133,8 @@ class CMCScraper:
                 return posts
 
             except Exception as e:
-                logger.error(f"Erro crítico durante a execução: {e}")
+                logger.error(f"Critical error during execution: {e}")
                 return []
             finally:
                 await browser.close()
-                logger.info("Navegador encerrado.")
+                logger.info("Browser closed.")
