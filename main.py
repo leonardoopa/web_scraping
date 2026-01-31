@@ -22,7 +22,7 @@ async def main():
     # Scraping
     scraper = CMCScraper()
     try:
-        raw_posts = await scraper.run(scroll_attempts=5, headless=False)
+        raw_posts = await scraper.run(scroll_attempts=5, headless=True)
     except Exception as e:
         logger.critical(f"Falha no Scraping: {e}")
         return
