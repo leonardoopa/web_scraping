@@ -1,60 +1,50 @@
 import asyncio
 import json
 import logging
-import os
 from dotenv import load_dotenv
 from app.scraper import CMCScraper
 from app.analyzer import CryptoAnalyzer
+import os
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("SystemOrchestrator")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("Main")
 
 
 async def main():
-    print("\n" + "=" * 50)
-    print("   SISTEMA DE INTELIGÊNCIA CRIPTO (CMC + GEMINI)   ")
-    print("=" * 50 + "\n")
+    print("--- INICIANDO SCANNER DE MERCADO ---")
 
-    # Scraping
     scraper = CMCScraper()
     try:
-        raw_posts = await scraper.run(scroll_attempts=5, headless=True)
+        market_data = await scraper.run_comprehensive_scan(headless=True)
     except Exception as e:
-        logger.critical(f"Falha no Scraping: {e}")
+        logger.critical(f"Erro no Scraper: {e}")
         return
 
-    if not raw_posts:
-        logger.warning("Nenhum dado coletado. Encerrando.")
-        return
+    print(f"\n Dados Coletados:")
+    print(
+        f"- Gainers/Losers: {'Correto' if market_data['market_movements'] else 'Falha'}"
+    )
+    print(f"- Notícias: {len(market_data['latest_news'])} manchetes")
+    print(f"- Posts Sociais: {len(market_data['community_posts'])} posts")
 
-    print(f"\n✅ [Scraper] {len(raw_posts)} posts coletados. Iniciando IA...\n")
+    analyzer = CryptoAnalyzer()
+    print("\n Processando Inteligência de Mercado...")
 
-    # LLM
-    try:
-        analyzer = CryptoAnalyzer()
-        insight_report = analyzer.analyze_market_sentiment(raw_posts)
+    insight = analyzer.analyze_market_health(market_data)
 
-        if insight_report:
-            print("=" * 50)
-            print("RELATÓRIO DE MERCADO - BITCOIN")
-            print("=" * 50)
-            # Imprime o JSON formatado e bonitinho
-            print(json.dumps(insight_report, indent=4, ensure_ascii=False))
-            print("=" * 50)
+    if insight:
+        print("\n" + "=" * 50)
+        print(" RELATÓRIO DE INTELIGÊNCIA CRIPTO")
+        print("=" * 50)
+        print(json.dumps(insight, indent=4, ensure_ascii=False))
 
-            # (Opcional) Salvar em arquivo para histórico
-            with open("relatorio_btc.json", "w", encoding="utf-8") as f:
-                json.dump(insight_report, f, indent=4, ensure_ascii=False)
-                logger.info("Relatório salvo em 'relatorio_btc.json'")
-
-    except ValueError as e:
-        logger.error(f"Configuração da IA inválida: {e}")
-    except Exception as e:
-        logger.error(f"Erro inesperado na análise: {e}")
+        # Salva o arquivo final
+        with open("market_intelligence.json", "w", encoding="utf-8") as f:
+            json.dump(insight, f, indent=4, ensure_ascii=False)
+            print("\n Relatório salvo em 'market_intelligence.json'")
+    else:
+        print("Falha na análise da IA.")
 
 
 if __name__ == "__main__":

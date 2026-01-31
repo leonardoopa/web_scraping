@@ -1,34 +1,36 @@
 import asyncio
 import os
 import logging
-from typing import List, Set
+from typing import List, Dict
 from playwright.async_api import async_playwright, Page
+import os
+from dotenv import load_dotenv
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
 
 class CMCScraper:
+    # URLs Oficiais do CoinMarketCap
+    URL_COMMUNITY = os.getenv("CMC_URL")
+    URL_GAINERS = os.getenv("CMC_URL_GAINERS")
+    URL_NEWS = os.getenv("CMC_URL_NEWS")
 
-    MIN_POST_LENGTH = 30
+    # Configurações
+    MIN_POST_LENGTH = 40
     MAX_POST_LENGTH = 2000
-    SCROLL_PIXELS = 4000
-    SCROLL_DELAY_SECONDS = 2.5
 
-    # Seletor CSS (Estratégia 'dir=auto' para pegar comentários de usuário)
-    POST_CONTENT_SELECTOR = 'div[dir="auto"], p'
-
-    # Blacklist
+    # Blacklist para limpar menus
     IGNORED_KEYWORDS = {
         "Leaderboards",
         "Trending",
         "Upcoming",
         "Recently Added",
-        "Gainers & Losers",
-        "Community Sentiment",
-        "Fear and Greed",
         "Log In",
         "Sign Up",
         "Copyright",
@@ -37,104 +39,93 @@ class CMCScraper:
         "Read all",
         "Show more",
         "Followers",
-        "Bullish",
-        "Bearish",
         "Cookies",
         "Privacy",
-        "Terms",
-        "Download",
-        "Portfolio",
     }
 
-    def __init__(self, url: str = None):
-        self.target_url = url or os.getenv("CMC_URL")
-        self._validate_config()
+    async def _extract_gainers_losers(self, page: Page) -> Dict[str, List[str]]:
+        """Extrai as tabelas de maiores altas e baixas."""
+        logger.info("Extraindo dados de Gainers & Losers...")
 
-    def _validate_config(self):
-        if not self.target_url:
-            raise ValueError(
-                "Configuration Error: The variable 'CMC_URL' was not found in the .env file."
-            )
-
-    async def _scroll_page(self, page: Page, scroll_count: int):
-        logger.info(f"Starting scroll of {scroll_count} steps...")
-
-        for i in range(scroll_count):
-            logger.info(f"Scrollando {i + 1}/{scroll_count}...")
-            await page.mouse.wheel(0, self.SCROLL_PIXELS)
-            await asyncio.sleep(self.SCROLL_DELAY_SECONDS)
-
-    def _is_valid_post(self, text: str) -> bool:
-        clean_text = text.strip()
-        text_len = len(clean_text)
-
-        # Validação (Tamanho)
-        if not (self.MIN_POST_LENGTH <= text_len <= self.MAX_POST_LENGTH):
-            return False
-
-        # Validação (Blacklist)
-        if any(keyword in clean_text for keyword in self.IGNORED_KEYWORDS):
-            return False
-
-        return True
-
-    async def _extract_and_filter_posts(self, page: Page) -> List[str]:
-        """Extrai os elementos do DOM e aplica os filtros Python."""
-        logger.info("Extracting raw text from the page...")
-
+        # Geralmente a primeira tabela é Gainers e a segunda é Losers.
         try:
-            # Pega todos os textos que batem com o seletor
-            raw_elements = await page.locator(
-                self.POST_CONTENT_SELECTOR
-            ).all_inner_texts()
+            # Pega todas as linhas de todas as tabelas na página
+            rows = await page.locator("table tbody tr").all_inner_texts()
+
+            half = len(rows) // 2
+            gainers = [r.replace("\n", " ") for r in rows[:10]]  # Top 10 Gainers
+            losers = [
+                r.replace("\n", " ") for r in rows[half : half + 10]
+            ]  # Top 10 Losers
+
+            return {"gainers": gainers, "losers": losers}
         except Exception as e:
-            logger.error(f"Failed to fetch selectors from the page: {e}")
-            return []
+            logger.error(f"Erro ao ler tabelas: {e}")
+            return {"gainers": [], "losers": []}
 
-        valid_posts: List[str] = []
-        seen_posts: Set[str] = set()
+    async def _extract_news(self, page: Page) -> List[str]:
+        """Extrai manchetes da página de notícias."""
+        logger.info("Extraindo Notícias (Headlines)...")
+        candidates = await page.locator("a, h2, h3, p").all_inner_texts()
 
-        for raw_text in raw_elements:
-            clean_text = raw_text.strip()
+        news = []
+        seen = set()
+        for text in candidates:
+            clean = text.strip()
+            # Filtra títulos curtos demais ou muito longos
+            if 20 < len(clean) < 300 and clean not in seen:
+                if not any(bad in clean for bad in self.IGNORED_KEYWORDS):
+                    news.append(clean)
+                    seen.add(clean)
 
-            # Aplica filtro e remove duplicatas
-            if self._is_valid_post(clean_text) and clean_text not in seen_posts:
-                valid_posts.append(clean_text)
-                seen_posts.add(clean_text)
+        return news[:15]  # Retorna as 15 notícias mais relevantes
 
-        logger.info(
-            f"Filter completed: {len(valid_posts)} valid posts from {len(raw_elements)} raw elements."
-        )
-        return valid_posts
+    async def run_comprehensive_scan(self, headless: bool = True) -> Dict:
+        """
+        Executa uma varredura completa: Comunidade, Mercado e Notícias.
+        """
+        data_package = {
+            "community_posts": [],
+            "market_movements": {},
+            "latest_news": [],
+        }
 
-    async def run(self, scroll_attempts: int = 3, headless: bool = False) -> List[str]:
-        async with async_playwright() as playwright:
-            logger.info("Starting Playwright engine...")
-
-            # Configuração do Browser
-            browser = await playwright.chromium.launch(headless=headless)
-
-            # Cria contexto com User-Agent para evitar bloqueios simples
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=headless)
             context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
             page = await context.new_page()
 
             try:
-                logger.info(f"Navigating to: {self.target_url}")
-                # 'networkidle' espera as conexões de rede baixarem (bom para sites dinâmicos)
-                await page.goto(
-                    self.target_url, wait_until="networkidle", timeout=60000
+                # 1. PEGAR GAINERS & LOSERS
+                await page.goto(self.URL_GAINERS, wait_until="domcontentloaded")
+                data_package["market_movements"] = await self._extract_gainers_losers(
+                    page
                 )
 
-                await self._scroll_page(page, scroll_attempts)
-                posts = await self._extract_and_filter_posts(page)
+                # 2. PEGAR NOTÍCIAS
+                await page.goto(self.URL_NEWS, wait_until="domcontentloaded")
+                data_package["latest_news"] = await self._extract_news(page)
 
-                return posts
+                # 3. PEGAR SENTIMENTO DA COMUNIDADE (Scroll necessário)
+                await page.goto(self.URL_COMMUNITY, wait_until="networkidle")
+                # Scroll rápido
+                for _ in range(3):
+                    await page.mouse.wheel(0, 3000)
+                    await asyncio.sleep(2)
+
+                # Reutilizando lógica de filtro de posts (simplificada aqui)
+                posts_raw = await page.locator('div[dir="auto"], p').all_inner_texts()
+                data_package["community_posts"] = [
+                    p.strip()
+                    for p in posts_raw
+                    if len(p) > 30 and not any(b in p for b in self.IGNORED_KEYWORDS)
+                ][:20]
 
             except Exception as e:
-                logger.error(f"Critical error during execution: {e}")
-                return []
+                logger.error(f"Erro no fluxo de scraping: {e}")
             finally:
                 await browser.close()
-                logger.info("Browser closed.")
+
+        return data_package
