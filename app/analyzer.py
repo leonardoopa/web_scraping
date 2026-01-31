@@ -28,7 +28,6 @@ class CryptoAnalyzer:
         if not data:
             return None
 
-        # Prompt estruturado para forçar a separação dos 3 pilares
         prompt = f"""
         Você é um Analista de Inteligência Cripto. Sua tarefa é gerar um relatório segregado baseando-se em 3 fontes distintas.
 

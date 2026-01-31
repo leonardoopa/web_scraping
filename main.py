@@ -39,7 +39,7 @@ async def main():
         print("=" * 50)
         print(json.dumps(insight, indent=4, ensure_ascii=False))
 
-        # Salva o arquivo final
+        # Salva o arquivo
         with open("market_intelligence.json", "w", encoding="utf-8") as f:
             json.dump(insight, f, indent=4, ensure_ascii=False)
             print("\n Relatório salvo em 'market_intelligence.json'")

@@ -44,19 +44,15 @@ class CMCScraper:
     }
 
     async def _extract_gainers_losers(self, page: Page) -> Dict[str, List[str]]:
-        """Extrai as tabelas de maiores altas e baixas."""
         logger.info("Extraindo dados de Gainers & Losers...")
 
-        # Geralmente a primeira tabela é Gainers e a segunda é Losers.
         try:
             # Pega todas as linhas de todas as tabelas na página
             rows = await page.locator("table tbody tr").all_inner_texts()
 
             half = len(rows) // 2
-            gainers = [r.replace("\n", " ") for r in rows[:10]]  # Top 10 Gainers
-            losers = [
-                r.replace("\n", " ") for r in rows[half : half + 10]
-            ]  # Top 10 Losers
+            gainers = [r.replace("\n", " ") for r in rows[:10]]  # 10 Gainers
+            losers = [r.replace("\n", " ") for r in rows[half : half + 10]]  # 10 Losers
 
             return {"gainers": gainers, "losers": losers}
         except Exception as e:
@@ -78,12 +74,9 @@ class CMCScraper:
                     news.append(clean)
                     seen.add(clean)
 
-        return news[:15]  # Retorna as 15 notícias mais relevantes
+        return news[:15]  # 15 notícias mais relevantes
 
     async def run_comprehensive_scan(self, headless: bool = True) -> Dict:
-        """
-        Executa uma varredura completa: Comunidade, Mercado e Notícias.
-        """
         data_package = {
             "community_posts": [],
             "market_movements": {},
@@ -98,24 +91,23 @@ class CMCScraper:
             page = await context.new_page()
 
             try:
-                # 1. PEGAR GAINERS & LOSERS
+                # PEGAR GAINERS & LOSERS
                 await page.goto(self.URL_GAINERS, wait_until="domcontentloaded")
                 data_package["market_movements"] = await self._extract_gainers_losers(
                     page
                 )
 
-                # 2. PEGAR NOTÍCIAS
+                # PEGAR NOTÍCIAS
                 await page.goto(self.URL_NEWS, wait_until="domcontentloaded")
                 data_package["latest_news"] = await self._extract_news(page)
 
-                # 3. PEGAR SENTIMENTO DA COMUNIDADE (Scroll necessário)
+                # PEGAR SENTIMENTO DA COMUNIDADE (Scroll necessário)
                 await page.goto(self.URL_COMMUNITY, wait_until="networkidle")
-                # Scroll rápido
+
                 for _ in range(3):
                     await page.mouse.wheel(0, 3000)
                     await asyncio.sleep(2)
 
-                # Reutilizando lógica de filtro de posts (simplificada aqui)
                 posts_raw = await page.locator('div[dir="auto"], p').all_inner_texts()
                 data_package["community_posts"] = [
                     p.strip()
