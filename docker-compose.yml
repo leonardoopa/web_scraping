@@ -1,0 +1,10 @@
+services:
+  crypto-bot:
+    build: .
+    container_name: cripto-scraping
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
