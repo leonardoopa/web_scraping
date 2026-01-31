@@ -1,0 +1,80 @@
+{
+    "1_gainers_losers_analysis": {
+        "highlight_gainer": {
+            "coin": "River (RIVER)",
+            "percentage": "23.88%",
+            "reason_hypothesis": "Provável alta impulsionada por notícias específicas do projeto, adoção ou listagem, contrastando com o sentimento geral de pressão de mercado."
+        },
+        "highlight_loser": {
+            "coin": "Lighter (LIT)",
+            "percentage": "15.74%",
+            "reason_hypothesis": "Apesar de listado na seção de 'losers', LIT exibiu um ganho positivo. Isso sugere que a lista de 'losers' pode estar incorreta ou indicar os de menor performance em um dia de ganhos generalizados para altcoins específicas, apesar da tendência macro."
+        },
+        "pattern_detected": "Ausência de um padrão setorial claro entre os ganhadores; os movimentos parecem ser impulsionados por fatores específicos de projetos individuais, não por tendências de nicho (ex: IA, memecoins). Os dados de 'losers' são anômalos, mostrando ganhos."
+    },
+    "2_news_intelligence": [
+        {
+            "headline": "FCA Proposes Consumer Duty and New Rules for Crypto Firms in UK Market Regulation",
+            "summary": "A Autoridade de Conduta Financeira (FCA) do Reino Unido propõe novas regras para garantir a proteção do consumidor e a transparência para empresas de cripto.",
+            "importance": "High",
+            "affected_coins": [
+                "BTC",
+                "ETH",
+                "Stablecoins",
+                "Altcoins operando no Reino Unido"
+            ]
+        },
+        {
+            "headline": "U.S. Department of the Treasury Sanctions UK Crypto Exchanges Over Iran Links",
+            "summary": "O Departamento do Tesouro dos EUA sancionou duas exchanges de criptomoedas registradas no Reino Unido (Zedcex Ex...) devido a supostas ligações com o Irã.",
+            "importance": "High",
+            "affected_coins": [
+                "BTC",
+                "ETH",
+                "Stablecoins",
+                "Mercado global de cripto (confiança/compliance)"
+            ]
+        },
+        {
+            "headline": "Crypto Futures Liquidations Trigger Staggering $1,143 Million Hourly Market Shock",
+            "summary": "Uma onda massiva e repentina de liquidações de futuros de criptomoedas, totalizando $1.143 bilhões em uma hora, causou um choque significativo no mercado.",
+            "importance": "High",
+            "affected_coins": [
+                "BTC",
+                "ETH",
+                "Altcoins de alta capitalização (devido a liquidações em cascata)"
+            ]
+        },
+        {
+            "headline": "Binance's Role in Cryptocurrency Flash Crash Under Scrutiny",
+            "summary": "A Binance está sob escrutínio por sua participação em um flash crash de criptomoedas, negando ser a causa principal e citando problemas técnicos.",
+            "importance": "Medium",
+            "affected_coins": [
+                "BTC",
+                "ETH",
+                "Pares de trading na Binance",
+                "Sentimento geral do mercado"
+            ]
+        },
+        {
+            "headline": "BGB Token Trading Begins on Kraken Platform",
+            "summary": "O token BGB lança negociações na plataforma Kraken, ampliando seu acesso global por meio de uma plataforma regulamentada.",
+            "importance": "Medium",
+            "affected_coins": [
+                "BGB"
+            ]
+        }
+    ],
+    "3_community_sentiment": {
+        "overall_mood": "Fear",
+        "hot_topics": [
+            "Liquidações massivas de futuros",
+            "Saídas de ETFs de Bitcoin e Ethereum",
+            "Movimento 'risk-off' institucional ('big money stepping back')",
+            "Compressão e desaceleração do momentum do BTC",
+            "Incerteza política nos EUA"
+        ],
+        "retail_perception": "O investidor de varejo (incluindo holders de longo prazo) está em fase de liquidação/distribuição, contribuindo para a pressão de venda no mercado e nervosismo generalizado."
+    },
+    "4_final_conclusion": "O mercado cripto está sob forte pressão de venda, com liquidações massivas de futuros e saídas significativas de capital institucional de ETFs de BTC e ETH, indicando um claro movimento 'risk-off'. A comunidade reflete um sentimento de medo e nervosismo, com discussões centradas na volatilidade e na incerteza macroeconômica. Embora alguns altcoins mostrem ganhos individuais notáveis (como River, 23.88%), este movimento parece ser isolado e não reflete uma tendência de mercado mais ampla. A anomalia nos dados de 'losers' (que também mostram ganhos) pode mascarar a verdadeira extensão da retração ou indicar um mercado polarizado, onde apenas ativos específicos conseguem desafiar a tendência de baixa geral impulsionada pelo 'dinheiro grande' que está se retirando."
+}
